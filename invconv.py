@@ -1,0 +1,214 @@
+import tkinter as tk
+
+class PitchCalculatorApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Pitch Calculator")
+        self.root.geometry("800x800")
+        self.speed_set = False
+        self.dark_mode = False
+
+        self.colors = {
+            "light": {
+                "bg": "#f0f0f0",
+                "fg": "#000000",
+                "entry_bg": "#ffffff",
+                "button_bg": "#e0e0e0"
+            },
+            "dark": {
+                "bg": "#1e1e1e",
+                "fg": "#ffffff",
+                "entry_bg": "#2e2e2e",
+                "button_bg": "#3e3e3e"
+            }
+        }
+
+        self.init_ui()
+        self.update_theme()
+
+    def init_ui(self):
+        self.main_frame = tk.Frame(self.root)
+        self.main_frame.pack(fill="both", expand=True)
+
+        # Dark Mode Toggle Button (Rounded)
+        self.toggle_frame = tk.Frame(self.main_frame)
+        self.toggle_frame.pack(anchor="nw", padx=10, pady=10)
+
+        self.toggle_button = tk.Button(
+            self.toggle_frame, text="\u263D", width=2, height=1, font=("Helvetica", 12), # Reduced size here
+            relief="flat", command=self.toggle_mode, bd=0
+        )
+        self.toggle_button.config(
+            borderwidth=2, relief="solid", bg=self.colors["light"]["button_bg"], fg=self.colors["light"]["fg"],
+            activebackground=self.colors["light"]["entry_bg"], activeforeground=self.colors["light"]["fg"],
+            padx=5, pady=5, width=3, height=1, border=0, highlightthickness=2,
+            highlightbackground=self.colors["light"]["button_bg"], highlightcolor=self.colors["light"]["button_bg"]
+        )
+        self.toggle_button.pack()
+
+        # Title
+        self.title_frame = tk.Frame(self.main_frame)
+        self.title_frame.pack(pady=5)
+
+        self.integer_label = tk.Label(self.title_frame, text="Integer", font=("Helvetica Black", 28, "bold"))
+        self.integer_label.pack()
+        self.converter_label = tk.Label(self.title_frame, text="converter", font=("Helvetica Black", 18, "bold"))
+        self.converter_label.pack()
+
+        # Inputs
+        self.input_frame = tk.Frame(self.main_frame)
+        self.input_frame.pack(pady=10)
+
+        self.speed_label = tk.Label(self.input_frame, text="Speed (m/min):")
+        self.speed_label.grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        self.speed_entry = tk.Entry(self.input_frame, width=15)
+        self.speed_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        self.set_speed_btn = tk.Button(self.input_frame, text="Set Speed", command=self.toggle_speed_input)
+        self.set_speed_btn.grid(row=1, column=0, columnspan=2, pady=5)
+
+        self.pitch_label = tk.Label(self.input_frame, text="Pitches:")
+        self.pitch_label.grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        self.pitch_entry = tk.Entry(self.input_frame, width=15)
+        self.pitch_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        self.time_label = tk.Label(self.input_frame, text="Time (min):")
+        self.time_label.grid(row=3, column=0, padx=5, pady=5, sticky="e")
+        self.time_entry = tk.Entry(self.input_frame, width=15)
+        self.time_entry.grid(row=3, column=1, padx=5, pady=5)
+
+        self.calculate_btn = tk.Button(self.input_frame, text="Calculate", command=self.calculate)
+        self.calculate_btn.grid(row=4, column=0, columnspan=2, pady=5)
+
+        self.result_label = tk.Label(self.main_frame, text="", font=("Helvetica", 12))
+        self.result_label.pack()
+
+        self.reset_btn = tk.Button(self.main_frame, text="Reset", command=self.reset_fields)
+        self.reset_btn.pack_forget()
+
+        # Conversion Table
+        self.table_frame = tk.Frame(self.main_frame)
+        self.table_frame.pack(pady=20)
+
+        self.canvas = tk.Canvas(self.table_frame, highlightthickness=0)
+        self.scrollbar = tk.Scrollbar(self.table_frame, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self.canvas)
+
+        self.scrollable_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+
+        self.create_conversion_chart()
+
+    def toggle_mode(self):
+        self.dark_mode = not self.dark_mode
+        self.update_theme()
+
+    def update_theme(self):
+        theme = self.colors["dark"] if self.dark_mode else self.colors["light"]
+        bg, fg, entry_bg, button_bg = theme["bg"], theme["fg"], theme["entry_bg"], theme["button_bg"]
+
+        self.root.configure(bg=bg)
+        self.main_frame.configure(bg=bg)
+        self.toggle_frame.configure(bg=bg)
+        self.toggle_button.configure(
+            text="\u263C" if self.dark_mode else "\u263D", # Crescent Moon for Dark Mode, Sun for Light Mode
+            bg=button_bg, fg=fg, activebackground=entry_bg, activeforeground=fg,
+            highlightbackground=button_bg, highlightthickness=2, relief="solid", bd=0
+        )
+
+        self.title_frame.configure(bg=bg)
+        self.integer_label.configure(bg=bg, fg=fg)
+        self.converter_label.configure(bg=bg, fg=fg)
+
+        for widget in self.input_frame.winfo_children():
+            if isinstance(widget, tk.Label):
+                widget.configure(bg=bg, fg=fg)
+            elif isinstance(widget, tk.Entry):
+                widget.configure(bg=entry_bg, fg=fg, insertbackground=fg)
+            elif isinstance(widget, tk.Button):
+                widget.configure(bg=button_bg, fg=fg)
+
+        self.result_label.configure(bg=bg, fg=fg)
+        self.reset_btn.configure(bg=button_bg, fg=fg)
+
+        self.scrollable_frame.configure(bg=bg)
+        for widget in self.scrollable_frame.winfo_children():
+            widget.configure(bg=bg, fg=fg)
+
+        self.canvas.configure(bg=bg)
+        self.table_frame.configure(bg=bg)
+        self.scrollbar.configure(bg=bg, troughcolor=bg, activebackground=bg)
+
+    def toggle_speed_input(self):
+        if not self.speed_set:
+            try:
+                self.speed = float(self.speed_entry.get())
+                self.speed_entry.config(state="disabled")
+                self.set_speed_btn.config(text="Reset Speed")
+                self.speed_set = True
+            except ValueError:
+                self.result_label.config(text="Invalid speed input.")
+        else:
+            self.speed_entry.config(state="normal")
+            self.speed_entry.delete(0, tk.END)
+            self.set_speed_btn.config(text="Set Speed")
+            self.speed_set = False
+
+    def calculate(self):
+        pitch_length = 0.801
+        if not self.speed_set:
+            self.result_label.config(text="Set speed first.")
+            return
+
+        pitches = self.pitch_entry.get()
+        time = self.time_entry.get()
+
+        if pitches and not time:
+            try:
+                pitches = int(pitches)
+                meters = pitches * pitch_length
+                time_min = meters / self.speed
+                hours = int(time_min // 60)
+                minutes = int(time_min % 60)
+                self.result_label.config(text=f"Time Required: {hours} hours and {minutes} minutes")
+            except ValueError:
+                self.result_label.config(text="Invalid pitch input.")
+        elif time and not pitches:
+            try:
+                time = float(time)
+                meters = self.speed * time
+                pitches = meters / pitch_length
+                self.result_label.config(text=f"Pitches: {int(pitches)}")
+            except ValueError:
+                self.result_label.config(text="Invalid time input.")
+        else:
+            self.result_label.config(text="Enter either pitches or time, not both.")
+
+        self.reset_btn.pack(pady=5)
+
+    def reset_fields(self):
+        self.pitch_entry.delete(0, tk.END)
+        self.time_entry.delete(0, tk.END)
+        self.result_label.config(text="")
+        self.reset_btn.pack_forget()
+
+    def create_conversion_chart(self):
+        tk.Label(self.scrollable_frame, text="Pitches", font=("Helvetica", 10, "bold")).grid(row=0, column=0, padx=10)
+        tk.Label(self.scrollable_frame, text="Meters", font=("Helvetica", 10, "bold")).grid(row=0, column=1, padx=10)
+        tk.Label(self.scrollable_frame, text="Pitches", font=("Helvetica", 10, "bold")).grid(row=0, column=2, padx=10)
+        tk.Label(self.scrollable_frame, text="Meters", font=("Helvetica", 10, "bold")).grid(row=0, column=3, padx=10)
+
+        for i, pitches in enumerate(range(200, 4201, 200)):
+            meter = pitches * 0.801
+            col = 0 if i < 10 else 2
+            row = i + 1 if i < 10 else i - 9
+            tk.Label(self.scrollable_frame, text=f"{pitches}", font=("Helvetica", 9)).grid(row=row, column=col, padx=10)
+            tk.Label(self.scrollable_frame, text=f"{meter:.1f}", font=("Helvetica", 9)).grid(row=row, column=col + 1, padx=10)
+
+root = tk.Tk()
+app = PitchCalculatorApp(root)
+root.mainloop()
